@@ -9,32 +9,59 @@
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #1e293b; }
         .container { max-width: 1400px; margin: auto; }
         
-        /* Filter Panel (Collapsible logic from previous step) */
+        /* Filter Panel - Base Styling */
         .filter-panel { 
             background: white; padding: 20px; border-radius: 12px; 
             display: grid; grid-template-columns: 1fr; gap: 15px; 
             margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            position: sticky; top: 10px; z-index: 10;
+            position: sticky; top: 10px; z-index: 100;
+            transition: all 0.2s ease-in-out;
+            max-height: 1000px; /* Permission to expand */
         }
-        .filter-group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-weight: 600; font-size: 0.85rem; color: #64748b; text-transform: uppercase; }
-        select { padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; }
-        
-        .reset-btn { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; align-self: flex-end; }
 
-        /* Provider Grid */
-        .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        /* THINNER & LIGHTER MOBILE MINIMIZED STATE */
+        @media (max-width: 767px) {
+            .filter-panel.is-minimized {
+                padding: 4px 15px;      /* Very slim padding */
+                max-height: 34px;       /* Thinner height */
+                background: #ffffff;    /* Light background */
+                border: 1px solid #cbd5e1; /* Subtle border */
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+            .filter-panel.is-minimized .filter-group, 
+            .filter-panel.is-minimized .reset-btn,
+            .filter-panel.is-minimized .close-btn { 
+                display: none; 
+            }
+            .filter-panel.is-minimized::after {
+                content: "🔍 Tap to Filter Providers";
+                color: var(--primary);
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+        }
+
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-weight: 600; font-size: 0.75rem; color: #64748b; text-transform: uppercase; }
+        select { padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; font-size: 16px; }
         
-        /* Card Styling */
+        .reset-btn { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .close-btn { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+
+        /* Provider Grid & Cards */
+        .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .card { 
             background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;
-            display: flex; flex-direction: column; min-height: 450px; transition: 0.2s;
-            position: relative;
+            display: flex; flex-direction: column; min-height: 420px; transition: 0.2s;
         }
         
         @media (min-width: 768px) {
             .filter-panel { grid-template-columns: repeat(4, 1fr); }
-            .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+            .mobile-only { display: none; }
         }
 
         .credential { color: var(--accent); font-weight: bold; font-size: 0.8rem; margin-bottom: 5px; }
@@ -47,26 +74,19 @@
         .rates-list { font-size: 0.85rem; margin-top: 5px; color: #475569; }
         .wait-info { margin-top: auto; padding-top: 15px; border-top: 1px solid #f1f5f9; }
         .wait-item { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; }
-        .wait-label { color: #64748b; text-transform: capitalize; }
         .wait-value { font-weight: 700; color: var(--success); }
 
-        /* Insurance Toggle Button */
-        .ins-toggle-btn {
-            margin-top: 15px; background: #f1f5f9; border: 1px solid #e2e8f0;
-            padding: 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
-            cursor: pointer; color: var(--primary); transition: 0.2s;
-        }
-        .ins-toggle-btn:hover { background: #e2e8f0; }
-        
-        .insurance-view { display: none; flex-direction: column; height: 100%; }
+        .ins-toggle-btn { margin: 15px 0; background: #f1f5f9; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; width: 100%; }
+
+        .insurance-view { display: none; }
         .card.show-ins .main-view { display: none; }
-        .card.show-ins .insurance-view { display: flex; }
+        .card.show-ins .insurance-view { display: block; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="filter-panel">
+    <div class="filter-panel is-minimized" id="filterHeader">
         <div class="filter-group">
             <label>Service Needed</label>
             <select id="serviceFilter"><option value="">All Services</option></select>
@@ -85,7 +105,10 @@
                 <option value="medication_management">Medication Management</option>
             </select>
         </div>
-        <button class="reset-btn" onclick="resetFilters()">Reset All</button>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+            <button class="reset-btn" onclick="resetFilters(event)">Reset All</button>
+            <button class="close-btn mobile-only" onclick="closeFilters(event)">Apply & Close</button>
+        </div>
     </div>
 
     <div id="providerGrid" class="provider-grid"></div>
@@ -93,7 +116,7 @@
 
 <script>
 const providers = [
-  {
+   {
     "name_with_education": "Heather Cornett, PhD",
     "credential": "LP",
     "services_offered": ["Psychological evaluations", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing", "Guardianship evaluations (Out-of-Pocket Only)", "Disability evaluations (Out-of-Pocket Only)", "Adoption evaluations (Out-of-Pocket Only)", "ESA evaluation (Out-of-Pocket Only)"],
@@ -114,8 +137,8 @@ const providers = [
   {
     "name_with_education": "Emeli Evans, MS",
     "credential": "LPA",
-    "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Psychological evaluations", "Personality Disorders", "IQ testing", "Therapy for teens", "Intimacy therapy for adults"],
-    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
+    "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Psychological evaluations", "Personality Disorders", "IQ testing", "Therapy", "Intimacy Therapy (Out-of-Pocket Only)"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$100" },
     "states_served": ["Kentucky"],
     "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
     "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "2 weeks", "therapy": "Contact for availability" }
@@ -132,7 +155,7 @@ const providers = [
   {
     "name_with_education": "Jonica Davis, MS",
     "credential": "T-LPA",
-    "services_offered": ["Therapy for adults", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing"],
+    "services_offered": ["Therapy", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing"],
     "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
     "states_served": ["Kentucky"],
     "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
@@ -167,6 +190,28 @@ const providers = [
   }
 ];
 
+const header = document.getElementById('filterHeader');
+
+// Minimizes on scroll down
+window.addEventListener('scroll', () => {
+    if (window.innerWidth < 768 && window.pageYOffset > 50) {
+        header.classList.add('is-minimized');
+    }
+});
+
+// Manual open
+header.addEventListener('click', () => {
+    if (header.classList.contains('is-minimized')) {
+        header.classList.remove('is-minimized');
+    }
+});
+
+// Manual close button logic
+function closeFilters(e) {
+    e.stopPropagation();
+    header.classList.add('is-minimized');
+}
+
 function init() {
     const serviceSet = new Set();
     const stateSet = new Set();
@@ -174,21 +219,19 @@ function init() {
         p.services_offered.forEach(s => serviceSet.add(s));
         p.states_served.forEach(st => stateSet.add(st));
     });
-
     const sFilter = document.getElementById('serviceFilter');
     const stFilter = document.getElementById('stateFilter');
-
     [...serviceSet].sort().forEach(s => sFilter.innerHTML += `<option value="${s}">${s}</option>`);
     [...stateSet].sort().forEach(st => stFilter.innerHTML += `<option value="${st}">${st}</option>`);
     render();
 }
 
-function resetFilters() {
+function resetFilters(e) {
+    e.stopPropagation();
     document.querySelectorAll('select').forEach(s => s.value = "");
     render();
 }
 
-// Function to handle card toggling
 function toggleCard(button) {
     const card = button.closest('.card');
     card.classList.toggle('show-ins');
@@ -208,51 +251,32 @@ function render() {
     });
 
     grid.innerHTML = filtered.map((p, index) => `
-        <div class="card" id="card-${index}">
+        <div class="card">
             <div class="main-view">
                 <div class="credential">${p.credential}</div>
                 <h3>${p.name_with_education}</h3>
-                
                 <div class="section-title">States</div>
-                <div class="tag-container">
-                    ${p.states_served.map(st => `<span class="tag">${st}</span>`).join('')}
-                </div>
-
+                <div class="tag-container">${p.states_served.map(st => `<span class="tag">${st}</span>`).join('')}</div>
                 <div class="section-title">Services</div>
                 <div class="tag-container">
                     ${p.services_offered.map(s => {
-                        const isOOPOnly = s.includes("Out-of-Pocket Only");
-                        return `<span class="tag ${isOOPOnly ? 'oop-only' : ''}">${s}</span>`;
+                        const isOOP = s.includes("Out-of-Pocket Only");
+                        return `<span class="tag ${isOOP ? 'oop-only' : ''}">${s}</span>`;
                     }).join('')}
                 </div>
-
-                <div class="section-title">Rates</div>
-                <div class="rates-list">
-                    ${Object.entries(p.out_of_pocket_rates).map(([k, v]) => `
-                        <div>${k.replace(/_/g, ' ')}: <strong>${v}</strong></div>
-                    `).join('')}
-                </div>
-
-                <button class="ins-toggle-btn" onclick="toggleCard(this)">View Accepted Insurance →</button>
-
+                <button class="ins-toggle-btn" onclick="toggleCard(this)">View Insurance →</button>
                 <div class="wait-info">
                     <div class="section-title">Wait Times</div>
                     ${Object.entries(p.wait_times).map(([key, val]) => `
-                        <div class="wait-item">
-                            <span class="wait-label">${key.replace(/_/g, ' ')}</span>
-                            <span class="wait-value">${val}</span>
-                        </div>
+                        <div class="wait-item"><span class="wait-label">${key.replace(/_/g, ' ')}</span><span class="wait-value">${val}</span></div>
                     `).join('')}
                 </div>
             </div>
-
             <div class="insurance-view">
                 <h3>${p.name_with_education}</h3>
                 <div class="section-title">Accepted Insurance</div>
-                <div class="tag-container" style="margin-bottom: 20px;">
-                    ${p.ins.map(i => `<span class="tag ins-tag">${i}</span>`).join('')}
-                </div>
-                <button class="ins-toggle-btn" onclick="toggleCard(this)" style="margin-top: auto;">← Back to Services</button>
+                <div class="tag-container">${p.ins.map(i => `<span class="tag ins-tag">${i}</span>`).join('')}</div>
+                <button class="ins-toggle-btn" onclick="toggleCard(this)" style="margin-top: 30px;">← Back</button>
             </div>
         </div>
     `).join('');
