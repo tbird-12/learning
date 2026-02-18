@@ -1,4 +1,3 @@
-<!-- current code in the website-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,6 +9,7 @@
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #1e293b; }
         .container { max-width: 1400px; margin: auto; }
         
+        /* Filter Panel (Collapsible logic from previous step) */
         .filter-panel { 
             background: white; padding: 20px; border-radius: 12px; 
             display: grid; grid-template-columns: 1fr; gap: 15px; 
@@ -20,15 +20,16 @@
         label { font-weight: 600; font-size: 0.85rem; color: #64748b; text-transform: uppercase; }
         select { padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; }
         
-        .reset-btn {
-            background: #ef4444; color: white; border: none; padding: 10px;
-            border-radius: 6px; cursor: pointer; font-weight: bold; align-self: flex-end;
-        }
+        .reset-btn { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; align-self: flex-end; }
 
+        /* Provider Grid */
         .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        
+        /* Card Styling */
         .card { 
             background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;
-            display: flex; flex-direction: column; transition: 0.2s;
+            display: flex; flex-direction: column; min-height: 450px; transition: 0.2s;
+            position: relative;
         }
         
         @media (min-width: 768px) {
@@ -41,12 +42,25 @@
         .tag-container { display: flex; flex-wrap: wrap; gap: 6px; }
         .tag { background: #f8fafc; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; border: 1px solid #e2e8f0; }
         .tag.oop-only { border-color: #fca5a5; background: #fff1f2; color: var(--warning); font-weight: 600; }
+        .tag.ins-tag { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
 
         .rates-list { font-size: 0.85rem; margin-top: 5px; color: #475569; }
         .wait-info { margin-top: auto; padding-top: 15px; border-top: 1px solid #f1f5f9; }
         .wait-item { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; }
         .wait-label { color: #64748b; text-transform: capitalize; }
         .wait-value { font-weight: 700; color: var(--success); }
+
+        /* Insurance Toggle Button */
+        .ins-toggle-btn {
+            margin-top: 15px; background: #f1f5f9; border: 1px solid #e2e8f0;
+            padding: 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
+            cursor: pointer; color: var(--primary); transition: 0.2s;
+        }
+        .ins-toggle-btn:hover { background: #e2e8f0; }
+        
+        .insurance-view { display: none; flex-direction: column; height: 100%; }
+        .card.show-ins .main-view { display: none; }
+        .card.show-ins .insurance-view { display: flex; }
     </style>
 </head>
 <body>
@@ -79,15 +93,23 @@
 
 <script>
 const providers = [
-{
+  {
     "name_with_education": "Heather Cornett, PhD",
     "credential": "LP",
-    "services_offered": ["Psychological evaluations", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", 
-    "Personality Disorders", "IQ testing", "Guardianship evaluations (Out-of-Pocket Only)", "Disability evaluations (Out-of-Pocket Only)", 
-    "Adoption evaluations (Out-of-Pocket Only)", "ESA evaluation (Out-of-Pocket Only)"],
-    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "esa_evaluation": "$250", "guardianship_evaluation": "$500", "disability_evaluation": "$1,000+", "adoption_evaluation": "$1,500"  },
+    "services_offered": ["Psychological evaluations", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing", "Guardianship evaluations (Out-of-Pocket Only)", "Disability evaluations (Out-of-Pocket Only)", "Adoption evaluations (Out-of-Pocket Only)", "ESA evaluation (Out-of-Pocket Only)"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "esa_evaluation": "$250", "guardianship_evaluation": "$500", "disability_evaluation": "$1,000+", "adoption_evaluation": "$1,500" },
     "states_served": ["Ohio", "Kentucky", "New Mexico", "Indiana", "Tennessee", "Psypact states"],
+    "ins": ["Tricare", "Medicare", "Ambetter", "CHAMPVA", "UHC", "Medicaid", "Aetna", "Cigna", "UMR", "Humana", "Passport"],
     "wait_times": { "testing_insurance": "3 months", "testing_out_of_pocket": "3 weeks" }
+  },
+  {
+    "name_with_education": "Nicola Allen, MSN",
+    "credential": "PMHNP",
+    "services_offered": ["Medication Management", "Medical Marijuana (Out-of-Pocket Only)"],
+    "out_of_pocket_rates": { "medication_intake": "$150", "medication_followup": "$80", "medical_marijuana": "$75" },
+    "states_served": ["Kentucky"],
+    "ins": ["Tricare", "Medicare", "Ambetter", "CHAMPVA", "UHC", "Medicaid", "Aetna", "Cigna", "UMR", "Humana", "Passport"],
+    "wait_times": { "medication_management": "Immediate" }
   },
   {
     "name_with_education": "Emeli Evans, MS",
@@ -95,15 +117,8 @@ const providers = [
     "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Psychological evaluations", "Personality Disorders", "IQ testing", "Therapy for teens", "Intimacy therapy for adults"],
     "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
     "states_served": ["Kentucky"],
+    "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
     "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "2 weeks", "therapy": "Contact for availability" }
-  },
-  {
-    "name_with_education": "Jonica Davis, MS",
-    "credential": "T-LPA",
-    "services_offered": ["Therapy for adults", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing"],
-    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
-    "states_served": ["Kentucky"],
-    "wait_times": { "testing_insurance": "3 months", "testing_out_of_pocket": "2 weeks", "therapy": "1 month" }
   },
   {
     "name_with_education": "Stephen Shu, MS",
@@ -111,7 +126,17 @@ const providers = [
     "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Psychological evaluations", "Personality Disorders", "IQ testing"],
     "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500" },
     "states_served": ["Kentucky"],
+    "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
     "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "2 weeks" }
+  },
+  {
+    "name_with_education": "Jonica Davis, MS",
+    "credential": "T-LPA",
+    "services_offered": ["Therapy for adults", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
+    "states_served": ["Kentucky"],
+    "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
+    "wait_times": { "testing_insurance": "3 months", "testing_out_of_pocket": "2 weeks", "therapy": "1 month" }
   },
   {
     "name_with_education": "Olivia Williams, PhD",
@@ -119,6 +144,7 @@ const providers = [
     "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing", "Psychological evaluations"],
     "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500" },
     "states_served": ["Kentucky"],
+    "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
     "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "4 weeks" }
   },
   {
@@ -127,16 +153,8 @@ const providers = [
     "services_offered": ["Autism Testing", "ADHD Testing", "Personality Disorders", "Psychological evaluations", "Therapy"],
     "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
     "states_served": ["Kentucky", "Ohio"],
+    "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
     "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "2 weeks", "therapy": "3 months" }
-  },
-  
-  {
-    "name_with_education": "Nicola Allen, MSN",
-    "credential": "PMHNP",
-    "services_offered": ["Medication Management", "Medical Marijuana (Out-of-Pocket Only)"],
-    "out_of_pocket_rates": { "medication_intake": "$150", "medication_followup": "$80", "medical_marijuana": "$75" },
-    "states_served": ["Kentucky"],
-    "wait_times": { "medication_management": "Immediate" }
   },
   {
     "name_with_education": "Tiffany Roundtree, MA.Ed",
@@ -144,6 +162,7 @@ const providers = [
     "services_offered": ["Therapy"],
     "out_of_pocket_rates": { "therapy": "$80" },
     "states_served": ["Kentucky"],
+    "ins": ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
     "wait_times": { "therapy": "Immediate" }
   }
 ];
@@ -169,6 +188,12 @@ function resetFilters() {
     render();
 }
 
+// Function to handle card toggling
+function toggleCard(button) {
+    const card = button.closest('.card');
+    card.classList.toggle('show-ins');
+}
+
 function render() {
     const service = document.getElementById('serviceFilter').value;
     const state = document.getElementById('stateFilter').value;
@@ -182,39 +207,52 @@ function render() {
         return matchService && matchState && matchPay;
     });
 
-    grid.innerHTML = filtered.map(p => `
-        <div class="card">
-            <div class="credential">${p.credential}</div>
-            <h3>${p.name_with_education}</h3>
-            
-            <div class="section-title">States</div>
-            <div class="tag-container">
-                ${p.states_served.map(st => `<span class="tag">${st}</span>`).join('')}
+    grid.innerHTML = filtered.map((p, index) => `
+        <div class="card" id="card-${index}">
+            <div class="main-view">
+                <div class="credential">${p.credential}</div>
+                <h3>${p.name_with_education}</h3>
+                
+                <div class="section-title">States</div>
+                <div class="tag-container">
+                    ${p.states_served.map(st => `<span class="tag">${st}</span>`).join('')}
+                </div>
+
+                <div class="section-title">Services</div>
+                <div class="tag-container">
+                    ${p.services_offered.map(s => {
+                        const isOOPOnly = s.includes("Out-of-Pocket Only");
+                        return `<span class="tag ${isOOPOnly ? 'oop-only' : ''}">${s}</span>`;
+                    }).join('')}
+                </div>
+
+                <div class="section-title">Rates</div>
+                <div class="rates-list">
+                    ${Object.entries(p.out_of_pocket_rates).map(([k, v]) => `
+                        <div>${k.replace(/_/g, ' ')}: <strong>${v}</strong></div>
+                    `).join('')}
+                </div>
+
+                <button class="ins-toggle-btn" onclick="toggleCard(this)">View Accepted Insurance →</button>
+
+                <div class="wait-info">
+                    <div class="section-title">Wait Times</div>
+                    ${Object.entries(p.wait_times).map(([key, val]) => `
+                        <div class="wait-item">
+                            <span class="wait-label">${key.replace(/_/g, ' ')}</span>
+                            <span class="wait-value">${val}</span>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
 
-            <div class="section-title">Services</div>
-            <div class="tag-container">
-                ${p.services_offered.map(s => {
-                    const isOOPOnly = s.includes("Out-of-Pocket Only");
-                    return `<span class="tag ${isOOPOnly ? 'oop-only' : ''}">${s}</span>`;
-                }).join('')}
-            </div>
-
-            <div class="section-title">Rates</div>
-            <div class="rates-list">
-                ${Object.entries(p.out_of_pocket_rates).map(([k, v]) => `
-                    <div>${k.replace(/_/g, ' ')}: <strong>${v}</strong></div>
-                `).join('')}
-            </div>
-
-            <div class="wait-info">
-                <div class="section-title">Wait Times</div>
-                ${Object.entries(p.wait_times).map(([key, val]) => `
-                    <div class="wait-item">
-                        <span class="wait-label">${key.replace(/_/g, ' ')}</span>
-                        <span class="wait-value">${val}</span>
-                    </div>
-                `).join('')}
+            <div class="insurance-view">
+                <h3>${p.name_with_education}</h3>
+                <div class="section-title">Accepted Insurance</div>
+                <div class="tag-container" style="margin-bottom: 20px;">
+                    ${p.ins.map(i => `<span class="tag ins-tag">${i}</span>`).join('')}
+                </div>
+                <button class="ins-toggle-btn" onclick="toggleCard(this)" style="margin-top: auto;">← Back to Services</button>
             </div>
         </div>
     `).join('');
