@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinician Directory - Testing & Therapy</title>
+    <style>
+        :root {
+            --primary: #1e293b;
+            --accent: #2563eb;
+            --bg: #f8fafc;
+            --text: #334155;
+            --wait-green: #dcfce7;
+            --wait-green-text: #166534;
+            --wait-yellow: #fef9c3;
+            --wait-yellow-text: #854d0e;
+            --wait-red: #fee2e2;
+            --wait-red-text: #991b1b;
+        }
+
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg); color: var(--text); padding: 40px 20px; }
+        .container { max-width: 1300px; margin: auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        
+        h1 { text-align: center; color: var(--primary); margin-bottom: 8px; }
+        .subtitle { text-align: center; color: #64748b; margin-bottom: 30px; }
+
+        #searchBar { width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; margin-bottom: 25px; outline: none; transition: 0.2s; }
+        #searchBar:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        th { background: #f1f5f9; padding: 15px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 20px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+
+        .clinician-cell { position: relative; }
+        .clinician-name { font-weight: 700; color: var(--accent); cursor: help; text-decoration: underline dotted; }
+        
+        /* Pricing Tooltip */
+        .tooltip { 
+            visibility: hidden; width: 260px; background: var(--primary); color: white; border-radius: 8px; 
+            padding: 15px; position: absolute; z-index: 100; bottom: 125%; left: 0; opacity: 0; 
+            transition: 0.3s; font-size: 0.85rem; font-weight: 400; line-height: 1.6;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+        }
+        .clinician-cell:hover .tooltip { visibility: visible; opacity: 1; }
+
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-right: 5px; }
+        .wait-immediate { background: var(--wait-green); color: var(--wait-green-text); }
+        .wait-standard { background: var(--wait-yellow); color: var(--wait-yellow-text); }
+        .wait-long { background: var(--wait-red); color: var(--wait-red-text); }
+
+        .age-tag { background: #e0f2fe; color: #0369a1; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 500; }
+        .ins-list { display: flex; flex-wrap: wrap; gap: 4px; max-width: 300px; }
+        .ins-tag { background: #f1f5f9; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Provider Network Directory</h1>
+    <p class="subtitle">Search by insurance, service, or age. Hover over names for out-of-pocket pricing.</p>
+    
+    <input type="text" id="searchBar" onkeyup="filterTable()" placeholder="Search providers, insurance, age range, or services...">
+
+    <table id="pTable">
+        <thead>
+            <tr>
+                <th>Clinician</th>
+                <th>Ages</th>
+                <th>Wait Time (Ins)</th>
+                <th>Insurances Accepted</th>
+                <th>Services</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+</div>
+
+<script>
+// Added "ages" property to each object
+const providers = [
+  {
+    name: "Heather Cornett, PhD",
+    ages: "All Ages",
+    wait: "3 months",
+    class: "wait-long",
+    services: "Psych Evaluations, Autism, ADHD, Dyslexia, Personality Disorders, IQ, ESA, Adoption",
+    ins: ["Tricare", "Medicare", "Ambetter", "CHAMPVA", "UHC", "Medicaid", "Aetna", "Cigna", "UMR", "Humana", "Passport"],
+    pricing: "• Standard Testing: $1,300<br>• Dyslexia: $1,500<br>• ESA Evaluation: $250"
+  },
+  {
+    name: "Nicola Allen, MSN",
+    ages: "All Ages",
+    wait: "Immediate",
+    class: "wait-immediate",
+    services: "Medication Management",
+    ins: ["Tricare", "Medicare", "Ambetter", "CHAMPVA", "UHC", "Medicaid", "Aetna", "Cigna", "UMR", "Humana", "Passport"],
+    pricing: "• Intake Session: $150<br>• Follow-up: $80"
+  },
+  {
+    name: "Emeli Evans, MS",
+    ages: "2-65",
+    wait: "2 months",
+    class: "wait-standard",
+    services: "Autism, ADHD, Dyslexia Testing, Teen Therapy, Intimacy Therapy",
+    ins: ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
+    pricing: "• Standard Testing: $1,300<br>• Dyslexia: $1,500<br>• Therapy: $80"
+  },
+  {
+    name: "Jonica Davis, MS",
+    ages: "18+",
+    wait: "2 months",
+    class: "wait-standard",
+    services: "Adult Therapy, Autism, ADHD, Dyslexia Testing",
+    ins: ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
+    pricing: "• Standard Testing: $1,300<br>• Dyslexia: $1,500<br>• Therapy: $80"
+  },
+  {
+    name: "Stephen Shu, MS",
+    ages: "14-65",
+    wait: "2 months",
+    class: "wait-standard",
+    services: "Autism, ADHD, Dyslexia Testing, Psychological Evaluations",
+    ins: ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
+    pricing: "• Standard Testing: $1,300<br>• Dyslexia: $1,500"
+  },
+  {
+    name: "Olivia Williams, PhD",
+    ages: "4-65",
+    wait: "2 months",
+    class: "wait-standard",
+    services: "Autism, ADHD, Dyslexia Testing, Psychological Evaluations",
+    ins: ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
+    pricing: "• Standard Testing: $1,300<br>• Dyslexia: $1,500"
+  },
+  {
+    name: "Tiffany Roundtree, MA.Ed",
+    ages: "14-65",
+    wait: "Immediate",
+    class: "wait-immediate",
+    services: "Individual Therapy",
+    ins: ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
+    pricing: "• Therapy: $80"
+  },
+  {
+    name: "Jatana Boggs, MA",
+    ages: "4-21",
+    wait: "2 months",
+    class: "wait-standard",
+    services: "Autism, ADHD, Dyslexia Testing, Therapy (Waitlisted)",
+    ins: ["Medicaid", "Aetna", "UHC Community", "Humana", "Passport", "Cigna"],
+    pricing: "• Standard Testing: $1,300<br>• Dyslexia: $1,500<br>• Therapy: $80"
+  }
+];
+
+function loadTable() {
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = providers.map(p => `
+        <tr>
+            <td class="clinician-cell">
+                <span class="clinician-name">${p.name}</span>
+                <div class="tooltip"><strong>Out-of-Pocket Rates:</strong><br>${p.pricing}</div>
+            </td>
+            <td><span class="age-tag">${p.ages}</span></td>
+            <td><span class="tag ${p.class}">${p.wait}</span></td>
+            <td><div class="ins-list">${p.ins.map(i => `<span class="ins-tag">${i}</span>`).join('')}</div></td>
+            <td style="font-size: 0.85rem; color: #64748b; line-height: 1.4;">${p.services}</td>
+        </tr>
+    `).join('');
+}
+
+function filterTable() {
+    let input = document.getElementById("searchBar").value.toLowerCase();
+    let rows = document.getElementById("tableBody").getElementsByTagName("tr");
+    for (let row of rows) {
+        row.style.display = row.textContent.toLowerCase().includes(input) ? "" : "none";
+    }
+}
+
+window.onload = loadTable;
+</script>
+
+</body>
+</html>

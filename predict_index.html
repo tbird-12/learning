@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Office Assistant Prototype</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-xl w-full bg-white shadow-2xl rounded-2xl overflow-hidden border border-slate-200">
+        <div class="bg-indigo-700 p-6">
+            <h2 class="text-2xl font-bold text-white">Clinical Assistant</h2>
+            <p class="text-indigo-100 text-sm">Automated Off-Hours Support</p>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="queryInput" 
+                    placeholder="Ask about insurance, doctors, or pricing..." 
+                    class="flex-1 px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none transition-all"
+                >
+                <button 
+                    onclick="predictAnswer()"
+                    class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+                >
+                    Ask
+                </button>
+            </div>
+
+            <div id="resultContainer" class="hidden space-y-3 pt-4 border-t border-slate-100">
+                <div id="confidenceBadge" class="inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider"></div>
+                
+                <div id="answerText" class="text-slate-700 leading-relaxed"></div>
+                
+                <div class="flex justify-between items-center pt-4 text-[10px] text-slate-400 border-t border-slate-50">
+                    <span id="timestamp"></span>
+                    <span id="scoreDisplay"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4" id="suggestionChips">
+        <button onclick="quickSearch('Insurances accepted')" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100 hover:bg-indigo-100 transition-colors">
+        📋 Insurance Info
+        </button>
+        <button onclick="quickSearch('Dr. Smith specialty')" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100 hover:bg-indigo-100 transition-colors">
+            👨‍⚕️ Clinician Specialties
+        </button>
+        <button onclick="quickSearch('Average wait times')" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100 hover:bg-indigo-100 transition-colors">
+            ⏳ Wait Times
+        </button>
+        <button onclick="quickSearch('Initial intake price')" class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100 hover:bg-indigo-100 transition-colors">
+            💰 Pricing
+        </button>
+    </div>
+
+    <script>
+    // New function to handle chip clicks
+    function quickSearch(queryText) {
+        const input = document.getElementById('queryInput');
+        input.value = queryText;
+        
+        // Visual feedback: briefly highlight the input
+        input.classList.add('ring-2', 'ring-indigo-400');
+        setTimeout(() => input.classList.remove('ring-2', 'ring-indigo-400'), 500);
+        
+        // Execute the search automatically
+        predictAnswer();
+    }
+    </script>
+
+    <script>
+        let fuse;
+
+        // Load data.json from local directory
+        async function loadData() {
+            try {
+                const response = await fetch('data.json');
+                const data = await response.json();
+                
+                const options = {
+                    keys: [
+                        { name: 'keywords', weight: 0.7 }, // Keywords are most important
+                        { name: 'topic', weight: 0.2 },
+                        { name: 'content', weight: 0.1 }
+                    ],
+                    includeScore: true,
+                    threshold: 0.4 // 0.0 is perfect match, 1.0 is everything
+                };
+                
+                fuse = new Fuse(data, options);
+                console.log("Assistant Ready: Data Loaded");
+            } catch (err) {
+                console.error("Could not load data.json. Ensure it's in the same folder.", err);
+            }
+        }
+
+        function predictAnswer() {
+            const query = document.getElementById('queryInput').value;
+            const container = document.getElementById('resultContainer');
+            const badge = document.getElementById('confidenceBadge');
+            const answer = document.getElementById('answerText');
+            const ts = document.getElementById('timestamp');
+            const scoreDisp = document.getElementById('scoreDisplay');
+
+            if (!query) return;
+
+            const results = fuse.search(query);
+            container.classList.remove('hidden');
+
+            if (results.length > 0) {
+                const top = results[0];
+                const score = top.score;
+
+                // Meta Info
+                ts.innerText = `Source: ${top.item.source_url || 'Internal'} • Updated: ${top.item.last_updated}`;
+                scoreDisp.innerText = `Match Score: ${score.toFixed(3)}`;
+
+                if (score < 0.2) {
+                    // HIGH CONFIDENCE
+                    badge.innerText = "Verified Answer";
+                    badge.className = "inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-green-100 text-green-700";
+                    answer.innerHTML = `<h3 class="font-bold text-lg text-slate-900">${top.item.topic}</h3><p>${top.item.content}</p>`;
+                } 
+                else if (score >= 0.2 && score < 0.4) {
+                    // MEDIUM CONFIDENCE
+                    badge.innerText = "Potential Match";
+                    badge.className = "inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700";
+                    answer.innerHTML = `
+                        <p class="text-sm italic text-slate-500 mb-2">I think this might help:</p>
+                        <h3 class="font-bold text-slate-900">${top.item.topic}</h3>
+                        <p>${top.item.content}</p>
+                        <p class="mt-4 text-xs font-medium text-indigo-600 underline">Please verify with our front desk tomorrow.</p>
+                    `;
+                }
+            } else {
+                // FALLBACK
+                badge.innerText = "No Direct Match";
+                badge.className = "inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-600";
+                answer.innerHTML = `
+                    <p class="italic text-slate-600 text-center py-4">
+                        I'm sorry, I don't have a specific answer for that in my current records. 
+                        Please call our clinicians tomorrow at <strong>(555) 000-0000</strong> for accurate assistance.
+                    </p>
+                `;
+                ts.innerText = "";
+                scoreDisp.innerText = "";
+            }
+        }
+
+        function generateDynamicChips(data) {
+            const chipContainer = document.getElementById('suggestionChips');
+            // Get unique categories from your JSON
+            const categories = [...new Set(data.map(item => item.category))];
+    
+            chipContainer.innerHTML = categories.map(cat => `
+            <button onclick="quickSearch('${cat}')" 
+                class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                ${cat.charAt(0).toUpperCase() + cat.slice(1)}
+            </button>
+            `).join('');
+        }
+
+
+        // Initialize
+        loadData();
+
+        // Allow Enter key to trigger search
+        document.getElementById('queryInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') predictAnswer();
+        });
+    </script>
+
+
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider Wait Times</title>
+    <style>
+        :root { --primary: #0f172a; --accent: #3b82f6; --bg: #f1f5f9; --success: #059669; --warning: #be123c; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #1e293b; }
+        .container { max-width: 1400px; margin: auto; }
+        
+        .filter-panel { 
+            background: white; padding: 20px; border-radius: 12px; 
+            display: grid; grid-template-columns: 1fr; gap: 15px; 
+            margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            position: sticky; top: 10px; z-index: 10;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-weight: 600; font-size: 0.85rem; color: #64748b; text-transform: uppercase; }
+        select { padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; cursor: pointer; }
+        
+        .reset-btn {
+            background: #ef4444; color: white; border: none; padding: 10px;
+            border-radius: 6px; cursor: pointer; font-weight: bold; align-self: flex-end;
+        }
+
+        .provider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .card { 
+            background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0;
+            display: flex; flex-direction: column; transition: 0.2s;
+        }
+        
+        @media (min-width: 768px) {
+            .filter-panel { grid-template-columns: repeat(4, 1fr); }
+            .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        }
+
+        .credential { color: var(--accent); font-weight: bold; font-size: 0.8rem; margin-bottom: 5px; }
+        .section-title { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: #94a3b8; margin: 15px 0 8px 0; }
+        .tag-container { display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag { background: #f8fafc; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; border: 1px solid #e2e8f0; }
+        .tag.oop-only { border-color: #fca5a5; background: #fff1f2; color: var(--warning); font-weight: 600; }
+
+        .rates-list { font-size: 0.85rem; margin-top: 5px; color: #475569; }
+        .wait-info { margin-top: auto; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+        .wait-item { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.9rem; }
+        .wait-label { color: #64748b; text-transform: capitalize; }
+        .wait-value { font-weight: 700; color: var(--success); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="filter-panel">
+        <div class="filter-group">
+            <label>Service Needed</label>
+            <select id="serviceFilter"><option value="">All Services</option></select>
+        </div>
+        <div class="filter-group">
+            <label>State</label>
+            <select id="stateFilter"><option value="">All States</option></select>
+        </div>
+        <div class="filter-group">
+            <label>Preferred Payment</label>
+            <select id="payFilter">
+                <option value="">Any Wait Time</option>
+                <option value="testing_insurance">Insurance Testing</option>
+                <option value="testing_out_of_pocket">Out of Pocket Testing</option>
+                <option value="therapy">Therapy</option>
+                <option value="medication_management">Medication Management</option>
+            </select>
+        </div>
+        <button class="reset-btn" onclick="resetFilters()">Reset All</button>
+    </div>
+
+    <div id="providerGrid" class="provider-grid"></div>
+</div>
+
+<script>
+const providers = [
+  {
+    "name_with_education": "Emeli Evans, MS",
+    "credential": "LPA",
+    "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Psychological evaluations", "Personality Disorders", "IQ testing", "Therapy for teens", "Intimacy therapy for adults"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
+    "states_served": ["Kentucky"],
+    "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "2 weeks", "therapy": "Contact for availability" }
+  },
+  {
+    "name_with_education": "Jonica Davis, MS",
+    "credential": "T-LPA",
+    "services_offered": ["Therapy for adults", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
+    "states_served": ["Kentucky"],
+    "wait_times": { "testing_insurance": "3 months", "testing_out_of_pocket": "2 weeks", "therapy": "1 month" }
+  },
+  {
+    "name_with_education": "Stephen Shu, MS",
+    "credential": "LPA",
+    "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Psychological evaluations", "Personality Disorders", "IQ testing"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500" },
+    "states_served": ["Kentucky"],
+    "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "2 weeks" }
+  },
+  {
+    "name_with_education": "Olivia Williams, PhD",
+    "credential": "T-LPA",
+    "services_offered": ["Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing", "Psychological evaluations"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500" },
+    "states_served": ["Kentucky"],
+    "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "4 weeks" }
+  },
+  {
+    "name_with_education": "Jatana Boggs, MA",
+    "credential": "LPCA",
+    "services_offered": ["Autism Testing", "ADHD Testing", "Personality Disorders", "Psychological evaluations", "Therapy"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "therapy": "$80" },
+    "states_served": ["Kentucky", "Ohio"],
+    "wait_times": { "testing_insurance": "2 months", "testing_out_of_pocket": "2 weeks", "therapy": "3 months" }
+  },
+  {
+    "name_with_education": "Heather Cornett, PhD",
+    "credential": "LP",
+    "services_offered": ["Psychological evaluations", "Autism Testing", "ADHD Testing", "Dyslexia testing (Out-of-Pocket Only)", "Personality Disorders", "IQ testing", "Guardianship evaluations", "Disability evaluations", "Adoption evaluations", "ESA evaluation (Out-of-Pocket Only)"],
+    "out_of_pocket_rates": { "testing_standard": "$1,300", "testing_dyslexia": "$1,500", "esa_evaluation": "$250" },
+    "states_served": ["Ohio", "Kentucky", "New Mexico", "Indiana", "Tennessee", "Psypact states"],
+    "wait_times": { "testing_insurance": "3 months", "testing_out_of_pocket": "3 weeks" }
+  },
+  {
+    "name_with_education": "Nicola Allen, MSN",
+    "credential": "PMHNP",
+    "services_offered": ["Medication Management", "Medical Marijuana (Out-of-Pocket Only)"],
+    "out_of_pocket_rates": { "medication_intake": "$150", "medication_followup": "$80", "medical_marijuana": "$75" },
+    "states_served": ["Kentucky"],
+    "wait_times": { "medication_management": "Immediate" }
+  },
+  {
+    "name_with_education": "Tiffany Roundtree, MA.Ed",
+    "credential": "LPCA",
+    "services_offered": ["Therapy"],
+    "out_of_pocket_rates": { "therapy": "$80" },
+    "states_served": ["Kentucky"],
+    "wait_times": { "therapy": "Immediate" }
+  }
+];
+
+function init() {
+    const serviceSet = new Set();
+    const stateSet = new Set();
+    providers.forEach(p => {
+        p.services_offered.forEach(s => serviceSet.add(s));
+        p.states_served.forEach(st => stateSet.add(st));
+    });
+
+    const sFilter = document.getElementById('serviceFilter');
+    const stFilter = document.getElementById('stateFilter');
+
+    [...serviceSet].sort().forEach(s => sFilter.innerHTML += `<option value="${s}">${s}</option>`);
+    [...stateSet].sort().forEach(st => stFilter.innerHTML += `<option value="${st}">${st}</option>`);
+    render();
+}
+
+function resetFilters() {
+    document.querySelectorAll('select').forEach(s => s.value = "");
+    render();
+}
+
+function render() {
+    const service = document.getElementById('serviceFilter').value;
+    const state = document.getElementById('stateFilter').value;
+    const payType = document.getElementById('payFilter').value;
+    const grid = document.getElementById('providerGrid');
+
+    const filtered = providers.filter(p => {
+        const matchService = !service || p.services_offered.includes(service);
+        const matchState = !state || p.states_served.includes(state);
+        const matchPay = !payType || p.wait_times[payType];
+        return matchService && matchState && matchPay;
+    });
+
+    grid.innerHTML = filtered.map(p => `
+        <div class="card">
+            <div class="credential">${p.credential}</div>
+            <h3>${p.name_with_education}</h3>
+            
+            <div class="section-title">States</div>
+            <div class="tag-container">
+                ${p.states_served.map(st => `<span class="tag">${st}</span>`).join('')}
+            </div>
+
+            <div class="section-title">Services</div>
+            <div class="tag-container">
+                ${p.services_offered.map(s => {
+                    const isOOPOnly = s.includes("Out-of-Pocket Only");
+                    return `<span class="tag ${isOOPOnly ? 'oop-only' : ''}">${s}</span>`;
+                }).join('')}
+            </div>
+
+            <div class="section-title">Rates</div>
+            <div class="rates-list">
+                ${Object.entries(p.out_of_pocket_rates).map(([k, v]) => `
+                    <div>${k.replace(/_/g, ' ')}: <strong>${v}</strong></div>
+                `).join('')}
+            </div>
+
+            <div class="wait-info">
+                <div class="section-title">Wait Times</div>
+                ${Object.entries(p.wait_times).map(([key, val]) => `
+                    <div class="wait-item">
+                        <span class="wait-label">${key.replace(/_/g, ' ')}</span>
+                        <span class="wait-value">${val}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+document.querySelectorAll('select').forEach(s => s.addEventListener('change', render));
+init();
+</script>
+
+</body>
+</html>
